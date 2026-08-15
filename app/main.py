@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app import config, excel
@@ -24,6 +24,12 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 def index() -> FileResponse:
     """Sirve la landing/UI de carga de facturas."""
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.head("/")
+def health() -> Response:
+    """Responde al health check de Render, que usa HEAD /."""
+    return Response(status_code=200)
 
 
 @app.post("/api/extract")
