@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Factura → Excel</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="hero">
+      <h1>Factura → Excel</h1>
+      <p>Sube tu factura, revisa los datos y guárdalos en tu base de datos.</p>
+      <a class="download-link" href="/api/download">⬇ Descargar Excel actual</a>
+    </header>
+
+    <section id="drop-zone" class="drop-zone" tabindex="0" aria-label="Zona de carga de archivos">
+      <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.pdf" hidden />
+      <div class="drop-content">
+        <span class="drop-icon">📄</span>
+        <p class="drop-title">Arrastra tu factura aquí</p>
+        <p class="drop-subtitle">JPG, PNG o PDF · máx. 15 MB</p>
+        <button type="button" id="btn-browse" class="btn btn-primary">Seleccionar archivo</button>
+      </div>
+    </section>
+
+    <section id="processing" class="panel hidden">
+      <div class="spinner"></div>
+      <p>Procesando factura…</p>
+    </section>
+
+    <section id="result" class="panel hidden">
+      <h2>Revisa los datos extraídos</h2>
+      <p class="muted">Corrige lo que haga falta y confirma para guardar en Excel.</p>
+      <form id="invoice-form">
+        <div class="grid">
+          <label>Fecha
+            <input type="date" name="fecha" required />
+          </label>
+          <label>NIT
+            <input type="text" name="nit" placeholder="900123456-7" required />
+          </label>
+          <label>Razón social
+            <input type="text" name="razon_social" required />
+          </label>
+          <label>N° factura
+            <input type="text" name="numero_factura" required />
+          </label>
+          <label>Subtotal
+            <input type="number" name="subtotal" step="0.01" min="0" />
+          </label>
+          <label>IVA
+            <input type="number" name="iva" step="0.01" min="0" />
+          </label>
+          <label>Total
+            <input type="number" name="total" step="0.01" min="0" required />
+          </label>
+          <label>Moneda
+            <select name="moneda">
+              <option value="COP">COP</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="MXN">MXN</option>
+            </select>
+          </label>
+        </div>
+        <div id="form-errors" class="errors hidden"></div>
+
+        <h3 class="section-title">Detalle de productos</h3>
+        <div class="table-wrap">
+          <table id="items-table" class="items-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th class="num">Cantidad</th>
+                <th class="num">Precio unit.</th>
+                <th class="num">Subtotal</th>
+                <th class="num">IVA</th>
+                <th class="num">Total</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="items-body"></tbody>
+          </table>
+        </div>
+        <button type="button" id="btn-add-item" class="btn btn-ghost">+ Agregar producto</button>
+
+        <div class="actions">
+          <button type="button" id="btn-reset" class="btn btn-ghost">Nueva factura</button>
+          <button type="submit" class="btn btn-primary">Guardar en Excel</button>
+        </div>
+      </form>
+      <div id="save-success" class="success hidden"></div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

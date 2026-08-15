@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: factura-ocr
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /
+    envVars:
+      - key: OCR_MODE
+        value: mock
+      - key: EXCEL_PATH
+        value: ./data/base_facturas.xlsx
