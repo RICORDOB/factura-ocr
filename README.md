@@ -88,6 +88,8 @@ DOCUMENT_AI_PROCESSOR_ID=tu-processor-id
 2. En [render.com](https://render.com) → **New → Blueprint** → conéctalo al repo.
 3. Render crea el web service automáticamente (Docker, plan free).
 
+**Nota sobre el health check**: Render verifica la salud del servicio con `HEAD /`. La app responde 200 en `app/main.py` (`@app.head("/")`); sin eso Render derriba el servicio al fallar el check.
+
 **Importante (plan free de Render)**: el sistema de archivos es efímero — el Excel se pierde al reiniciar/redeployear. Usa el botón **Descargar Excel actual** en la web para respaldar tus datos regularmente, o conecta un disco persistente (plan de pago). La data vive en `data/base_facturas.xlsx`.
 
 ## Notas
