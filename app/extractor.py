@@ -16,6 +16,7 @@ Formato de salida esperado:
     "line_items": [
         {
             "producto": "Arroz 1kg",
+            "codigo": "B00373",
             "cantidad": 10,
             "precio_unitario": 4200.00,
             "subtotal": 42000.00,
@@ -137,6 +138,7 @@ def normalize(raw_entities: dict) -> dict:
 # Alias de las sub-entidades de Document AI para cada campo de línea
 _LINE_ALIASES = {
     "producto": ["description", "descripcion", "product", "name", "product_code"],
+    "codigo": ["product_code", "codigo", "code", "sku", "item_code"],
     "cantidad": ["quantity", "cantidad", "qty"],
     "precio_unitario": ["unit_price", "precio_unitario", "unitprice"],
     "subtotal": ["amount", "subtotal", "line_amount", "item_amount"],
@@ -154,11 +156,16 @@ def _normalize_line_items(raw_items: Any) -> list[dict]:
             continue
         item = {
             "producto": str(_first_value(raw, _LINE_ALIASES["producto"]) or "").strip(),
+            "codigo": str(_first_value(raw, _LINE_ALIASES["codigo"]) or "").strip(),
             "cantidad": _rounded(_first_value(raw, _LINE_ALIASES["cantidad"])),
             "precio_unitario": _rounded(_first_value(raw, _LINE_ALIASES["precio_unitario"])),
             "subtotal": _rounded(_first_value(raw, _LINE_ALIASES["subtotal"])),
             "iva": _rounded(_first_value(raw, _LINE_ALIASES["iva"])),
         }
+        # Document AI a veces confunde product_code con la descripción; si ambos
+        # coinciden, no hay un código real: se deja vacío para llenar a mano.
+        if item["codigo"] and item["codigo"].lower() == item["producto"].lower():
+            item["codigo"] = ""
         if not item["producto"] and item["subtotal"] is None:
             continue  # línea vacía, se descarta
         items.append(item)
@@ -209,6 +216,7 @@ def validate(data: dict) -> tuple[list[str], dict]:
         if not isinstance(raw, dict):
             continue
         producto = str(raw.get("producto") or "").strip()
+        codigo = str(raw.get("codigo") or "").strip()
         cantidad = _as_number(raw.get("cantidad")) or 0.0
         precio = _as_number(raw.get("precio_unitario")) or 0.0
         subtotal = _as_number(raw.get("subtotal"))
@@ -226,6 +234,7 @@ def validate(data: dict) -> tuple[list[str], dict]:
         limpio["line_items"].append(
             {
                 "producto": producto,
+                "codigo": codigo,
                 "cantidad": round(cantidad, 2),
                 "precio_unitario": round(precio, 2),
                 "subtotal": round(subtotal, 2),

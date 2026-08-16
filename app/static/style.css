@@ -51,6 +51,7 @@ body {
 .items-table .num { text-align: right; }
 .items-table input { width: 100%; min-width: 80px; padding: 6px 8px; font-size: 0.9rem; }
 .items-table .input-producto { min-width: 180px; }
+.items-table .input-codigo { min-width: 90px; }
 .btn-remove { background: transparent; border: none; color: var(--error); font-size: 1.2rem; cursor: pointer; }
 .btn-remove:hover { opacity: 0.7; }
 

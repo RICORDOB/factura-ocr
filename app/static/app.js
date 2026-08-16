@@ -113,6 +113,7 @@
   function addItemRow(item) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
+      <td><input class="input-codigo" data-field="codigo" placeholder="Código" /></td>
       <td><input class="input-producto" data-field="producto" placeholder="Nombre del producto" /></td>
       <td class="num"><input type="number" step="0.01" min="0" data-field="cantidad" /></td>
       <td class="num"><input type="number" step="0.01" min="0" data-field="precio_unitario" /></td>
@@ -122,6 +123,7 @@
       <td><button type="button" class="btn-remove" title="Eliminar">×</button></td>
     `;
     if (item) {
+      tr.querySelector('[data-field="codigo"]').value = item.codigo || "";
       tr.querySelector('[data-field="producto"]').value = item.producto || "";
       tr.querySelector('[data-field="cantidad"]').value = item.cantidad ?? "";
       tr.querySelector('[data-field="precio_unitario"]').value = item.precio_unitario ?? "";
@@ -145,6 +147,7 @@
           return el ? el.value.trim() : "";
         };
         return {
+          codigo: val("codigo"),
           producto: val("producto"),
           cantidad: val("cantidad") === "" ? null : Number(val("cantidad")),
           precio_unitario: val("precio_unitario") === "" ? null : Number(val("precio_unitario")),
@@ -186,7 +189,11 @@
 
       show(saveSuccess);
       saveSuccess.innerHTML =
-        "Factura guardada en <strong>" + payload.archivo + "</strong> (fila " + payload.fila + ").";
+        "Factura guardada en <strong>" + payload.archivo + "</strong> (fila " + payload.fila +
+        (payload.detalle_filas
+          ? ", con " + payload.detalle_filas + " producto(s) en la hoja Detalles"
+          : "") +
+        "). Descárgala con el enlace <strong>⬇ Descargar Excel actual</strong>.";
     } catch (err) {
       alert("No se pudo conectar con el servidor: " + err.message);
     }

@@ -30,6 +30,7 @@ HEADERS = [
 # Cabeceras de la hoja de detalle de productos
 DETAIL_HEADERS = [
     "N° Factura",
+    "Código",
     "Producto",
     "Cantidad",
     "Precio Unitario",
@@ -67,6 +68,7 @@ def _normalize_detail_row(numero_factura: str, item: dict) -> list:
     """Convierte un line_item normalizado en una fila alineada a DETAIL_HEADERS."""
     return [
         numero_factura,
+        item.get("codigo"),
         item.get("producto"),
         item.get("cantidad"),
         item.get("precio_unitario"),
@@ -94,13 +96,44 @@ def _style_headers(ws) -> None:
 
 
 def _ensure_sheet(wb, name: str, headers: list[str]):
-    """Devuelve la hoja (creándola con cabeceras si no existe)."""
-    if name in wb.sheetnames:
-        return wb[name]
-    ws = wb.create_sheet(title=name)
-    ws.append(headers)
-    _style_headers(ws)
+    """Devuelve la hoja (creándola con cabeceras si no existe).
+
+    Si la hoja ya existe pero sus cabeceras no coinciden con las actuales
+    (p. ej. un archivo creado por una versión anterior de la app), migra
+    reubicando las columnas antiguas por nombre y nunca pierde datos.
+    """
+    if name not in wb.sheetnames:
+        ws = wb.create_sheet(title=name)
+        ws.append(headers)
+        _style_headers(ws)
+        return ws
+    ws = wb[name]
+    existing_headers = [str(c.value or "").strip() for c in ws[HEADER_ROW]]
+    if existing_headers != headers:
+        return _migrate_sheet(wb, ws, headers)
     return ws
+
+
+def _migrate_sheet(wb, ws, new_headers: list[str]):
+    """Reescribe una hoja con las nuevas cabeceras, reordenando las filas
+    antiguas según el nombre de su columna. La hoja se recubre al final."""
+    old_headers = [str(c.value or "").strip() for c in ws[HEADER_ROW]]
+    rows = ws.iter_rows(min_row=FIRST_DATA_ROW, values_only=True)
+    data = [
+        dict(zip(old_headers, row))
+        for row in rows
+        if any(v is not None and str(v).strip() != "" for v in row)
+    ]
+    title = ws.title
+    idx = wb.sheetnames.index(title)
+    wb.remove(ws)
+    nuevo = wb.create_sheet(title=title)
+    wb.move_sheet(nuevo, offset=idx - (len(wb.sheetnames) - 1))
+    nuevo.append(new_headers)
+    _style_headers(nuevo)
+    for row in data:
+        nuevo.append([row.get(h) for h in new_headers])
+    return nuevo
 
 
 def append_invoice(excel_path: Path, data: dict) -> dict:
