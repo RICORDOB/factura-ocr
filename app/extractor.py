@@ -65,9 +65,20 @@ def _as_number(value: Any) -> float | None:
         return float(value)
     text = str(value).strip().replace("$", "").replace("COP", "").replace(" ", "")
     try:
-        return float(text)
+        numero = float(text)
     except ValueError:
-        pass
+        numero = None
+
+    if numero is not None:
+        # float() acepta "833.835" y "166767", pero en formatos COP el punto o la
+        # coma seguidos de 3 dígitos son separador de miles: "833.835" -> 833835.0
+        last_sep = max(text.rfind(","), text.rfind("."))
+        if last_sep > 0 and len(text) - last_sep - 1 >= 3:
+            try:
+                return float(text.replace(",", "").replace(".", ""))
+            except ValueError:
+                pass
+        return numero
 
     # Si no hay separadores, ya falló: no es numérico
     if "," not in text and "." not in text:
@@ -91,15 +102,23 @@ def _as_number(value: Any) -> float | None:
         return None
 
 
+def _rounded(value: Any) -> float | None:
+    """Redondea un monto a 2 decimales; devuelve None si no es numérico."""
+    numero = _as_number(value)
+    if numero is None:
+        return None
+    return round(numero, 2)
+
+
 def normalize(raw_entities: dict) -> dict:
     """Convierte entidades crudas del OCR en el dict canónico de factura."""
     fecha = _first_value(raw_entities, _FIELD_ALIASES["fecha"])
     nit = _first_value(raw_entities, _FIELD_ALIASES["nit"])
     razon_social = _first_value(raw_entities, _FIELD_ALIASES["razon_social"])
     numero_factura = _first_value(raw_entities, _FIELD_ALIASES["numero_factura"])
-    subtotal = _as_number(_first_value(raw_entities, _FIELD_ALIASES["subtotal"]))
-    iva = _as_number(_first_value(raw_entities, _FIELD_ALIASES["iva"]))
-    total = _as_number(_first_value(raw_entities, _FIELD_ALIASES["total"]))
+    subtotal = _rounded(_first_value(raw_entities, _FIELD_ALIASES["subtotal"]))
+    iva = _rounded(_first_value(raw_entities, _FIELD_ALIASES["iva"]))
+    total = _rounded(_first_value(raw_entities, _FIELD_ALIASES["total"]))
     moneda = _first_value(raw_entities, _FIELD_ALIASES["moneda"]) or "COP"
 
     return {
@@ -135,10 +154,10 @@ def _normalize_line_items(raw_items: Any) -> list[dict]:
             continue
         item = {
             "producto": str(_first_value(raw, _LINE_ALIASES["producto"]) or "").strip(),
-            "cantidad": _as_number(_first_value(raw, _LINE_ALIASES["cantidad"])),
-            "precio_unitario": _as_number(_first_value(raw, _LINE_ALIASES["precio_unitario"])),
-            "subtotal": _as_number(_first_value(raw, _LINE_ALIASES["subtotal"])),
-            "iva": _as_number(_first_value(raw, _LINE_ALIASES["iva"])),
+            "cantidad": _rounded(_first_value(raw, _LINE_ALIASES["cantidad"])),
+            "precio_unitario": _rounded(_first_value(raw, _LINE_ALIASES["precio_unitario"])),
+            "subtotal": _rounded(_first_value(raw, _LINE_ALIASES["subtotal"])),
+            "iva": _rounded(_first_value(raw, _LINE_ALIASES["iva"])),
         }
         if not item["producto"] and item["subtotal"] is None:
             continue  # línea vacía, se descarta
