@@ -121,7 +121,7 @@ class GoogleDocumentAI:
                     line_items.append(item)
                 continue
 
-            value = entity.normalized_value.text if entity.normalized_value.text else entity.text_value
+            value = self._entity_text(entity)
             if value and value.strip():
                 # Se conserva la primera aparición de cada tipo de entidad
                 entities.setdefault(key, value.strip())
@@ -130,8 +130,7 @@ class GoogleDocumentAI:
             entities["line_items"] = line_items
         return entities
 
-    @staticmethod
-    def _parse_line_item(entity) -> dict:
+    def _parse_line_item(self, entity) -> dict:
         """Convierte una entidad 'line_item' de Document AI en un dict simple.
 
         Las propiedades típicas son line_item/description, line_item/quantity,
@@ -141,10 +140,29 @@ class GoogleDocumentAI:
         item: dict = {}
         for prop in entity.properties:
             prop_key = prop.type_.replace("line_item/", "").strip()
-            value = prop.normalized_value.text if prop.normalized_value.text else prop.text_value
+            value = self._entity_text(prop)
             if value and value.strip():
                 item.setdefault(prop_key, value.strip())
         return item if item else None
+
+    @staticmethod
+    def _entity_text(entity) -> str:
+        """Extrae el texto de una entidad tolerando las versiones del SDK.
+
+        En google-cloud-documentai >= 3.x los valores están en `mention_text`
+        (con normalizado en `normalized_value.text`); en versiones previas era
+        `text_value` / `text`.
+        """
+        normalized = getattr(entity, "normalized_value", None)
+        if normalized and getattr(normalized, "text", None):
+            return normalized.text
+        text_value = getattr(entity, "text_value", "")
+        if text_value:
+            return text_value
+        text = getattr(entity, "mention_text", "")
+        if text is None:
+            text = getattr(entity, "text", "")
+        return text
 
     @staticmethod
     def _guess_mime(filename: str) -> str:

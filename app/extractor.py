@@ -30,11 +30,11 @@ from typing import Any
 # Sinónimos por los que Document AI puede nombrar cada campo, según versión del API
 _FIELD_ALIASES = {
     "fecha": ["invoice_date", "fecha", "date"],
-    "nit": ["seller_tax_id", "tax_id", "nit", "rut"],
-    "razon_social": ["seller_name", "razon_social", "name"],
+    "nit": ["seller_tax_id", "supplier_tax_id", "tax_id", "nit", "rut"],
+    "razon_social": ["seller_name", "supplier_name", "razon_social", "name"],
     "numero_factura": ["invoice_id", "numero_factura", "invoice_number", "document_id"],
-    "subtotal": ["total_net_amount", "subtotal", "total_net"],
-    "iva": ["total_tax_amount", "tax_amount", "iva"],
+    "subtotal": ["total_net_amount", "net_amount", "subtotal", "total_net"],
+    "iva": ["total_tax_amount", "tax_amount", "vat", "iva"],
     "total": ["total_amount", "total", "grand_total"],
     "moneda": ["currency", "moneda"],
 }
@@ -50,7 +50,15 @@ def _first_value(raw: dict, keys: list[str]) -> Any:
 
 
 def _as_number(value: Any) -> float | None:
-    """Convierte a float tolerando comas decimales y símbolos de moneda."""
+    """Convierte a float tolerando formatos de montos latinoamericanos.
+
+    Reglas (montos de factura):
+    - Se quitan símbolos de moneda y espacios.
+    - La coma o el punto usado como separador de miles (bloque de 3 dígitos)
+      se elimina; el último separador con 1-2 dígitos es el decimal.
+      Ej.: "119,000" -> 119000.0 · "4,200" -> 4200.0 · "14.500" -> 14500.0
+           "1.234.567,89" -> 1234567.89 · "14.5" -> 14.5
+    """
     if value in (None, ""):
         return None
     if isinstance(value, (int, float)):
@@ -59,11 +67,28 @@ def _as_number(value: Any) -> float | None:
     try:
         return float(text)
     except ValueError:
-        # Última opción: normalizar coma como separador decimal (formato colombiano)
-        try:
-            return float(text.replace(".", "").replace(",", "."))
-        except ValueError:
-            return None
+        pass
+
+    # Si no hay separadores, ya falló: no es numérico
+    if "," not in text and "." not in text:
+        return None
+
+    # Contar dígitos después del último separador
+    last_sep = max(text.rfind(","), text.rfind("."))
+    decimals = len(text) - last_sep - 1
+
+    if decimals == 3:
+        # El separador final es de miles: no hay decimales
+        candidate = text.replace(",", "").replace(".", "")
+    else:
+        # El último separador es decimal (1-2 dígitos); los anteriores son miles
+        integer_part, _, frac_part = text.rpartition(text[last_sep])
+        candidate = integer_part.replace(",", "").replace(".", "") + "." + frac_part
+
+    try:
+        return float(candidate)
+    except ValueError:
+        return None
 
 
 def normalize(raw_entities: dict) -> dict:
@@ -92,7 +117,7 @@ def normalize(raw_entities: dict) -> dict:
 
 # Alias de las sub-entidades de Document AI para cada campo de línea
 _LINE_ALIASES = {
-    "producto": ["description", "descripcion", "product", "name"],
+    "producto": ["description", "descripcion", "product", "name", "product_code"],
     "cantidad": ["quantity", "cantidad", "qty"],
     "precio_unitario": ["unit_price", "precio_unitario", "unitprice"],
     "subtotal": ["amount", "subtotal", "line_amount", "item_amount"],
