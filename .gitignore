@@ -6,3 +6,4 @@ uvicorn.log
 .DS_Store
 *.xlsx
 .~lock.*#
+credentials/
